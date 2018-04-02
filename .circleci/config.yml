@@ -1,0 +1,33 @@
+version: 2
+machine:
+  environment:
+    PATH: "${PATH}:${HOME}/${CIRCLE_PROJECT_REPONAME}/node_modules/.bin"
+
+dependencies:
+  override:
+    - yarn
+  cache_directories:
+    - ~/.cache/yarn
+
+test:
+  override:
+    - yarn test
+    
+jobs:
+  build:
+    docker:
+      - image: circleci/node:latest
+    working_directory: ~/curbmap-participate
+    branches:
+      only:
+        - master
+    steps:
+      - checkout
+      - run: yarn install
+      - run: tar -c -v --exclude node_modules -f curbmap-participate.tar *
+      - run: bzip2 curbmap-participate.tar
+      - deploy:
+          name: Something else
+          command:  |
+            scp -o StrictHostKeyChecking=no curbmap-participate.tar.bz2 ec2-user@curbmap.com:~/deploy/curbmap-participate/
+            ssh -o StrictHostKeyChecking=no ec2-user@curbmap.com "cd ~/deploy && ./runscript.sh build > /dev/null &"
